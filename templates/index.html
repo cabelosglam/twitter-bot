@@ -1,0 +1,1421 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Twitter Bot</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:      #080b14;
+  --s1:      #0d1120;
+  --s2:      #111827;
+  --border:  #1e2a3a;
+  --accent:  #38bdf8;
+  --green:   #34d399;
+  --red:     #f87171;
+  --yellow:  #fbbf24;
+  --text:    #e2e8f0;
+  --muted:   #4a5568;
+  --lighter: #64748b;
+}
+
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  min-height: 100vh;
+  display: flex;
+}
+
+/* bg glow */
+body::before {
+  content: '';
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background:
+    radial-gradient(ellipse 60% 50% at 15% 50%, rgba(56,189,248,.06) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 40% at 85% 20%, rgba(52,211,153,.04) 0%, transparent 55%);
+}
+
+/* ── SIDEBAR ── */
+.sidebar {
+  position: fixed; top: 0; left: 0; bottom: 0;
+  width: 220px; background: var(--s1);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  z-index: 10; padding: 28px 0;
+}
+
+.logo {
+  padding: 0 24px 28px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 20px;
+}
+
+.logo-mark {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 26px; letter-spacing: 2px;
+  background: linear-gradient(135deg, var(--accent), var(--green));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  line-height: 1;
+}
+
+.logo-sub {
+  font-size: 10px; color: var(--muted);
+  font-family: 'DM Mono', monospace;
+  letter-spacing: 1px; text-transform: uppercase;
+  margin-top: 4px;
+}
+
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 24px; cursor: pointer;
+  font-size: 14px; font-weight: 500; color: var(--lighter);
+  border-left: 2px solid transparent;
+  transition: all .15s; user-select: none;
+}
+
+.nav-item:hover { color: var(--text); background: rgba(255,255,255,.03); }
+.nav-item.active { color: var(--accent); border-left-color: var(--accent); background: rgba(56,189,248,.06); }
+.nav-icon { font-size: 16px; width: 20px; text-align: center; }
+
+.sidebar-footer {
+  margin-top: auto; padding: 20px 24px 0;
+  border-top: 1px solid var(--border);
+}
+
+.hist-badge {
+  background: var(--s2); border: 1px solid var(--border);
+  border-radius: 10px; padding: 12px;
+}
+
+.hist-num {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 28px; color: var(--accent); line-height: 1;
+}
+
+.hist-label {
+  font-size: 11px; color: var(--muted);
+  font-family: 'DM Mono', monospace; margin-top: 2px;
+}
+
+.btn-clear {
+  margin-top: 8px; width: 100%;
+  background: none; border: 1px solid var(--border);
+  border-radius: 8px; color: var(--muted);
+  font-size: 12px; padding: 7px;
+  cursor: pointer; transition: all .15s;
+  font-family: 'DM Sans', sans-serif;
+}
+
+.btn-clear:hover { border-color: var(--red); color: var(--red); }
+
+/* ── MAIN ── */
+.main {
+  margin-left: 220px; flex: 1; position: relative; z-index: 1;
+  padding: 40px; max-width: calc(100% - 220px);
+}
+
+.page { display: none; }
+.page.active { display: block; }
+
+/* ── PAGE HEADER ── */
+.page-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 36px; letter-spacing: 2px; line-height: 1;
+  margin-bottom: 4px;
+}
+
+.page-sub {
+  font-size: 13px; color: var(--muted);
+  font-family: 'DM Mono', monospace; margin-bottom: 32px;
+}
+
+/* ── CARDS ── */
+.card {
+  background: var(--s1); border: 1px solid var(--border);
+  border-radius: 16px; padding: 24px; margin-bottom: 20px;
+}
+
+.card-title {
+  font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
+  text-transform: uppercase; color: var(--muted);
+  font-family: 'DM Mono', monospace; margin-bottom: 18px;
+}
+
+/* ── INPUTS ── */
+input[type=text], input[type=number], input[type=password], textarea, select {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 10px; color: var(--text);
+  font-family: 'DM Mono', monospace; font-size: 13px;
+  outline: none; transition: border-color .2s, box-shadow .2s;
+  width: 100%;
+}
+
+input[type=text]:focus, input[type=number]:focus,
+input[type=password]:focus, textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(56,189,248,.1);
+}
+
+input[type=text], input[type=number], input[type=password] {
+  height: 42px; padding: 0 14px;
+}
+
+textarea {
+  padding: 14px; resize: vertical; line-height: 1.6;
+}
+
+label {
+  display: block; font-size: 12px; color: var(--muted);
+  font-family: 'DM Mono', monospace; margin-bottom: 7px;
+}
+
+.field { margin-bottom: 18px; }
+.field:last-child { margin-bottom: 0; }
+
+/* ── USERS LIST ── */
+.users-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+
+.users-toolbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 4px; margin-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+.users-count {
+  font-size: 11px; font-family: 'DM Mono', monospace; color: var(--muted);
+}
+
+.select-all-row {
+  display: flex; align-items: center; gap: 8px;
+}
+
+.btn-select-all {
+  background: none; border: 1px solid var(--border);
+  border-radius: 8px; color: var(--lighter);
+  font-size: 11px; font-family: 'DM Mono', monospace;
+  padding: 5px 12px; cursor: pointer; transition: all .15s;
+}
+
+.btn-select-all:hover { border-color: var(--accent); color: var(--accent); }
+
+.user-item {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 10px; padding: 10px 14px;
+  animation: fadeIn .2s ease; transition: border-color .15s;
+}
+
+.user-item:hover { border-color: var(--lighter); }
+.user-item.inativo { opacity: 0.45; }
+
+.user-avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent2, #7c6aff), var(--accent));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; color: #080810;
+  flex-shrink: 0; font-family: 'Syne', sans-serif;
+}
+
+.user-info { flex: 1; min-width: 0; }
+
+.user-name {
+  font-family: 'DM Mono', monospace; font-size: 13px; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.user-name span { color: var(--muted); margin-right: 1px; }
+
+.user-nicho {
+  font-size: 11px; color: var(--muted);
+  font-family: 'DM Mono', monospace; margin-top: 2px;
+}
+
+.user-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+
+.toggle-switch {
+  position: relative; width: 40px; height: 22px; cursor: pointer;
+}
+
+.toggle-switch input { display: none; }
+
+.toggle-track {
+  position: absolute; inset: 0; border-radius: 11px;
+  background: var(--border); transition: background .2s;
+}
+
+.toggle-switch input:checked + .toggle-track { background: var(--green); }
+
+.toggle-thumb {
+  position: absolute; top: 3px; left: 3px;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: white; transition: transform .2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,.3);
+}
+
+.toggle-switch input:checked ~ .toggle-thumb { transform: translateX(18px); }
+
+.btn-remove {
+  background: none; border: none; color: var(--muted);
+  cursor: pointer; font-size: 15px; padding: 4px 7px;
+  border-radius: 6px; transition: all .15s; line-height: 1;
+}
+
+.btn-remove:hover { color: var(--red); background: rgba(248,113,113,.1); }
+
+.add-user-row { display: flex; gap: 8px; margin-top: 12px; }
+.add-user-row input { flex: 1; }
+
+/* ── BUTTONS ── */
+.btn {
+  border: none; border-radius: 10px;
+  font-family: 'DM Sans', sans-serif; font-weight: 600;
+  font-size: 14px; padding: 11px 20px;
+  cursor: pointer; transition: opacity .2s, transform .1s;
+  display: inline-flex; align-items: center; gap: 8px;
+}
+
+.btn:active { transform: scale(.98); }
+.btn:disabled { opacity: .35; cursor: not-allowed; transform: none; }
+
+.btn-primary {
+  background: var(--accent); color: #08111d;
+}
+
+.btn-secondary {
+  background: var(--s2); border: 1px solid var(--border); color: var(--text);
+}
+
+.btn-success {
+  background: var(--green); color: #052e1a;
+}
+
+.btn-run {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--green) 100%);
+  color: #05111d; font-size: 16px; font-weight: 700;
+  padding: 16px 32px; border-radius: 14px; width: 100%;
+  justify-content: center; letter-spacing: .5px;
+}
+
+/* ── STEPPER ── */
+.stepper {
+  display: flex; align-items: center;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 10px; overflow: hidden; height: 42px;
+}
+
+.stepper button {
+  background: none; border: none; color: var(--text);
+  font-size: 20px; width: 44px; height: 100%;
+  cursor: pointer; transition: background .15s;
+}
+
+.stepper button:hover { background: var(--border); }
+
+.stepper input {
+  flex: 1; background: none; border: none;
+  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  border-radius: 0; text-align: center;
+  font-weight: 700; font-size: 16px; height: 100%;
+}
+
+/* ── RANGE ── */
+.range-row { display: flex; gap: 12px; }
+.range-row .field { flex: 1; }
+
+/* ── STATUS BAR ── */
+.status-bar {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--s2); border: 1px solid var(--border);
+  border-radius: 12px; padding: 12px 16px; margin-bottom: 16px;
+}
+
+.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
+.dot.idle   { background: var(--muted); }
+.dot.running { background: var(--green); animation: pulse 1s infinite; }
+.dot.done   { background: var(--accent); }
+.dot.error  { background: var(--red); }
+
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.7)} }
+
+.status-text { font-size: 13px; font-family: 'DM Mono', monospace; color: var(--muted); }
+
+/* ── TERMINAL ── */
+.terminal { background: #020408; border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+
+.term-bar {
+  display: flex; align-items: center; gap: 6px;
+  padding: 10px 14px; border-bottom: 1px solid var(--border);
+  background: var(--s1);
+}
+
+.td { width: 10px; height: 10px; border-radius: 50%; }
+.td:nth-child(1){background:#ff5f57} .td:nth-child(2){background:#febc2e} .td:nth-child(3){background:#28c840}
+.term-label { font-size: 11px; font-family: 'DM Mono', monospace; color: var(--muted); margin-left: 4px; }
+
+.term-body {
+  padding: 16px; min-height: 240px; max-height: 400px;
+  overflow-y: auto; font-family: 'DM Mono', monospace;
+  font-size: 12px; line-height: 1.9;
+}
+
+.ll { color: #4a5568; word-break: break-word; animation: fi .15s ease; }
+.ll.ok  { color: var(--green); }
+.ll.err { color: var(--red); }
+.ll.inf { color: var(--accent); }
+.ll.wrn { color: var(--yellow); }
+
+.empty-log { color: var(--muted); text-align: center; padding: 40px 0; font-size: 12px; }
+
+@keyframes fi { from{opacity:0;transform:translateY(3px)} to{opacity:1;transform:translateY(0)} }
+@keyframes fadeIn { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:translateY(0)} }
+
+/* ── PROMPT EDITOR ── */
+.btn-edit-prompt {
+  background: none; border: 1px solid var(--border);
+  border-radius: 6px; padding: 4px 8px; font-size: 13px;
+  cursor: pointer; color: var(--muted); transition: all .15s;
+  flex-shrink: 0; margin-left: 6px;
+}
+.btn-edit-prompt:hover { border-color: var(--accent); color: var(--accent); }
+
+.prompt-option-card {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 12px; padding: 14px 16px;
+  transition: all .2s;
+}
+
+.prompt-option-card.active-prompt {
+  border-color: var(--accent); background: rgba(56,189,248,.05);
+}
+
+.prompt-option-header {
+  display: flex; align-items: center; gap: 12px;
+}
+
+.prompt-option-icon { font-size: 22px; flex-shrink: 0; }
+
+.prompt-option-title {
+  font-size: 14px; font-weight: 600; color: var(--text);
+}
+
+.prompt-option-sub {
+  font-size: 12px; color: var(--muted); margin-top: 2px;
+  font-family: 'DM Mono', monospace;
+}
+
+.prompt-radio {
+  margin-left: auto; font-size: 18px;
+  color: var(--accent); flex-shrink: 0;
+}
+
+.tom-btn {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--lighter);
+  font-size: 12px; font-family: 'DM Sans', sans-serif;
+  padding: 7px 14px; cursor: pointer; transition: all .15s;
+}
+
+.tom-btn:hover { border-color: var(--accent); color: var(--accent); }
+.tom-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(56,189,248,.08); }
+
+.prompt-vars {
+  display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px;
+}
+
+.var-chip {
+  background: rgba(56,189,248,.1); border: 1px solid rgba(56,189,248,.2);
+  border-radius: 6px; padding: 3px 10px;
+  font-size: 11px; font-family: 'DM Mono', monospace; color: var(--accent);
+}
+
+/* ── SAVE TOAST ── */
+.toast {
+  position: fixed; bottom: 30px; right: 30px;
+  background: var(--green); color: #052e1a;
+  font-weight: 700; font-size: 13px;
+  padding: 12px 20px; border-radius: 12px;
+  box-shadow: 0 8px 30px rgba(0,0,0,.4);
+  transform: translateY(80px); opacity: 0;
+  transition: all .3s; z-index: 100;
+}
+
+.toast.show { transform: translateY(0); opacity: 1; }
+
+/* ── SPIN ── */
+.spin { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(0,0,0,.2); border-top-color: #05111d; border-radius: 50%; animation: sp .7s linear infinite; }
+@keyframes sp { to { transform: rotate(360deg); } }
+
+/* ── GRID ── */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+/* ── DASHBOARD ── */
+.dash-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-bottom: 20px;
+}
+
+.stat-card {
+  background: var(--s1); border: 1px solid var(--border);
+  border-radius: 16px; padding: 20px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+
+.stat-card.alerta { border-color: var(--red); background: rgba(248,113,113,.05); }
+.stat-card.destaque { border-color: var(--accent); background: rgba(56,189,248,.05); }
+
+.stat-num {
+  font-family: 'Bebas Neue', sans-serif; font-size: 42px;
+  line-height: 1; color: var(--text);
+}
+
+.stat-num.verde { color: var(--green); }
+.stat-num.amarelo { color: var(--yellow); }
+.stat-num.vermelho { color: var(--red); }
+.stat-num.azul { color: var(--accent); }
+
+.stat-label {
+  font-size: 11px; font-family: 'DM Mono', monospace;
+  color: var(--muted); text-transform: uppercase; letter-spacing: 1px;
+}
+
+.stat-sub { font-size: 12px; color: var(--lighter); font-family: 'DM Mono', monospace; margin-top: 2px; }
+
+.alerta-banner {
+  background: rgba(248,113,113,.1); border: 1px solid var(--red);
+  border-radius: 12px; padding: 12px 16px; margin-bottom: 16px;
+  font-size: 13px; color: var(--red); font-family: 'DM Mono', monospace;
+  display: none;
+}
+
+.perfil-bar-row {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+}
+
+.perfil-bar-nome {
+  font-family: 'DM Mono', monospace; font-size: 12px;
+  color: var(--text); width: 140px; flex-shrink: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.perfil-bar-track {
+  flex: 1; background: var(--border); border-radius: 4px; height: 8px; overflow: hidden;
+}
+
+.perfil-bar-fill {
+  height: 100%; border-radius: 4px;
+  background: linear-gradient(90deg, var(--accent), var(--green));
+  transition: width .6s ease;
+}
+
+.perfil-bar-count {
+  font-family: 'DM Mono', monospace; font-size: 12px;
+  color: var(--muted); width: 30px; text-align: right; flex-shrink: 0;
+}
+
+.chart-container {
+  display: flex; align-items: flex-end; gap: 3px;
+  height: 80px; padding: 8px 0;
+}
+
+.chart-bar {
+  flex: 1; background: var(--accent); border-radius: 3px 3px 0 0;
+  min-height: 2px; transition: height .3s;
+  opacity: 0.7; cursor: pointer; position: relative;
+}
+
+.chart-bar:hover { opacity: 1; }
+
+.chart-bar[data-today="true"] { background: var(--green); opacity: 1; }
+
+.chart-labels {
+  display: flex; justify-content: space-between;
+  font-size: 10px; color: var(--muted);
+  font-family: 'DM Mono', monospace; margin-top: 4px;
+}
+
+.limite-bar {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 8px;
+}
+
+.limite-label { font-size: 12px; color: var(--muted); font-family: 'DM Mono', monospace; width: 60px; }
+.limite-track { flex: 1; background: var(--border); border-radius: 6px; height: 12px; overflow: hidden; }
+.limite-fill { height: 100%; border-radius: 6px; transition: width .5s; }
+.limite-count { font-size: 12px; font-family: 'DM Mono', monospace; color: var(--text); width: 50px; text-align: right; }
+
+@media (max-width: 900px) {
+  .sidebar { width: 60px; }
+  .logo, .nav-item span, .logo-sub, .sidebar-footer { display: none; }
+  .nav-icon { width: 100%; text-align: center; font-size: 20px; }
+  .main { margin-left: 60px; max-width: calc(100% - 60px); padding: 24px 20px; }
+  .grid-2 { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-mark">XBOT</div>
+    <div class="logo-sub">Auto Comment</div>
+  </div>
+
+  <nav>
+    <div class="nav-item" onclick="showPage('dashboard')">
+      <span class="nav-icon">📊</span>
+      <span>Dashboard</span>
+    </div>
+    <div class="nav-item active" onclick="showPage('rodar')">
+      <span class="nav-icon">▶</span>
+      <span>Rodar Bot</span>
+    </div>
+    <div class="nav-item" onclick="showPage('perfis')">
+      <span class="nav-icon">👥</span>
+      <span>Perfis</span>
+    </div>
+    <div class="nav-item" onclick="showPage('config')">
+      <span class="nav-icon">⚙️</span>
+      <span>Configurações</span>
+    </div>
+    <div class="nav-item" onclick="showPage('ia')">
+      <span class="nav-icon">🤖</span>
+      <span>Treinar IA</span>
+    </div>
+    <div class="nav-item" onclick="showPage('posts')">
+      <span class="nav-icon">✍️</span>
+      <span>Gerar Post</span>
+    </div>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="hist-badge">
+      <div class="hist-num" id="hist-count">—</div>
+      <div class="hist-label">já comentados</div>
+    </div>
+    <button class="btn-clear" onclick="limparHistorico()">🗑 Limpar histórico</button>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+
+  <!-- ── DASHBOARD ── -->
+  <div class="page" id="page-dashboard">
+    <div class="page-title">DASHBOARD</div>
+    <div class="page-sub">Acompanhe sua atividade e evite suspensão</div>
+
+    <div class="alerta-banner" id="alerta-banner">
+      ⚠️ Atenção! Você já comentou muito hoje. Pausar é recomendado para evitar suspensão.
+    </div>
+
+    <!-- Métricas principais -->
+    <div class="dash-grid">
+      <div class="stat-card destaque">
+        <div class="stat-num azul" id="dash-hoje">—</div>
+        <div class="stat-label">Hoje</div>
+        <div class="stat-sub" id="dash-hoje-sub">carregando...</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num verde" id="dash-semana">—</div>
+        <div class="stat-label">Esta semana</div>
+        <div class="stat-sub" id="dash-semana-sub">&nbsp;</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num amarelo" id="dash-mes">—</div>
+        <div class="stat-label">Este mês</div>
+        <div class="stat-sub" id="dash-mes-sub">&nbsp;</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="dash-total">—</div>
+        <div class="stat-label">Total geral</div>
+        <div class="stat-sub">&nbsp;</div>
+      </div>
+    </div>
+
+    <!-- Limites de segurança -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title">🛡️ Limites de segurança</div>
+      <div class="limite-bar">
+        <div class="limite-label">Hoje</div>
+        <div class="limite-track"><div class="limite-fill" id="barra-hoje" style="width:0%;background:var(--green)"></div></div>
+        <div class="limite-count"><span id="num-hoje">0</span> / 20</div>
+      </div>
+      <div class="limite-bar">
+        <div class="limite-label">Semana</div>
+        <div class="limite-track"><div class="limite-fill" id="barra-semana" style="width:0%;background:var(--accent)"></div></div>
+        <div class="limite-count"><span id="num-semana">0</span> / 80</div>
+      </div>
+      <div class="limite-bar" style="margin-bottom:0">
+        <div class="limite-label">Mês</div>
+        <div class="limite-track"><div class="limite-fill" id="barra-mes" style="width:0%;background:var(--purple,#7c6aff)"></div></div>
+        <div class="limite-count"><span id="num-mes">0</span> / 300</div>
+      </div>
+      <div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:12px">
+        Limites recomendados para evitar suspensão no Twitter/X
+      </div>
+    </div>
+
+    <!-- Gráfico 30 dias -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title">📈 Comentários — últimos 30 dias</div>
+      <div class="chart-container" id="chart-30dias"></div>
+      <div class="chart-labels">
+        <span id="chart-label-inicio"></span>
+        <span style="color:var(--green)">hoje</span>
+      </div>
+    </div>
+
+    <!-- Ranking de perfis -->
+    <div class="card">
+      <div class="card-title">🏆 Perfis mais comentados</div>
+      <div id="ranking-perfis">
+        <div style="color:var(--muted);font-size:13px;font-family:'DM Mono',monospace">Nenhum dado ainda...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── RODAR ── -->
+  <div class="page active" id="page-rodar">
+    <div class="page-title">RODAR BOT</div>
+    <div class="page-sub">Inicie o bot com as configurações salvas</div>
+
+    <div class="card">
+      <div class="card-title">Status</div>
+      <div class="status-bar">
+        <div class="dot idle" id="dot"></div>
+        <span class="status-text" id="status-text">Aguardando...</span>
+      </div>
+      <button class="btn btn-run" id="btn-run" onclick="rodar()">
+        <span>▶</span><span>Iniciar Bot</span>
+      </button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Resumo da configuração</div>
+      <div id="resumo" style="font-family:'DM Mono',monospace;font-size:13px;color:var(--lighter);line-height:2"></div>
+    </div>
+
+    <div>
+      <div class="card-title" style="margin-bottom:12px">Terminal — Logs</div>
+      <div class="terminal">
+        <div class="term-bar">
+          <div class="td"></div><div class="td"></div><div class="td"></div>
+          <span class="term-label">output</span>
+        </div>
+        <div class="term-body" id="log-body">
+          <div class="empty-log">Os logs aparecem aqui quando o bot rodar...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PERFIS ── -->
+  <div class="page" id="page-perfis">
+    <div class="page-title">PERFIS</div>
+    <div class="page-sub">Gerencie os perfis que serão comentados</div>
+
+    <div class="card">
+      <div class="users-toolbar">
+        <span class="users-count" id="users-count">0 perfis</span>
+        <div class="select-all-row">
+          <button class="btn-select-all" onclick="ativarTodos()">✅ Ativar todos</button>
+          <button class="btn-select-all" onclick="desativarTodos()">⛔ Desativar todos</button>
+        </div>
+      </div>
+      <div class="users-list" id="users-list"></div>
+      <div class="add-user-row">
+        <input type="text" id="new-user" placeholder="Digite o @ do perfil..." onkeydown="if(event.key==='Enter')addUser()">
+        <button class="btn btn-primary" onclick="addUser()">+ Adicionar</button>
+      </div>
+    </div>
+
+    <button class="btn btn-success" onclick="salvarPerfisConfig()">💾 Salvar perfis</button>
+  </div>
+
+  <!-- ── CONFIG ── -->
+  <div class="page" id="page-config">
+    <div class="page-title">CONFIGURAÇÕES</div>
+    <div class="page-sub">Ajuste o comportamento do bot</div>
+
+    <div class="card">
+      <div class="card-title">Posts por perfil</div>
+      <div class="field">
+        <label>Quantos posts comentar em cada perfil</label>
+        <div class="stepper">
+          <button onclick="step('posts_per_user',-1)">−</button>
+          <input type="number" id="posts_per_user" value="3" min="1" max="50">
+          <button onclick="step('posts_per_user',1)">+</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Delay entre ações (segundos)</div>
+      <div class="range-row">
+        <div class="field">
+          <label>Mínimo</label>
+          <input type="number" id="delay_min" value="4" min="1" max="60">
+        </div>
+        <div class="field">
+          <label>Máximo</label>
+          <input type="number" id="delay_max" value="9" min="1" max="120">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🔐 Login do Twitter</div>
+      <div style="background:rgba(248,113,113,.07);border:1px solid rgba(248,113,113,.2);border-radius:10px;padding:12px;margin-bottom:16px;font-size:12px;color:#f87171;font-family:'DM Mono',monospace">
+        ⚠️ Suas credenciais ficam salvas no servidor. Use uma conta secundária se preferir mais segurança.
+      </div>
+      <div class="field">
+        <label>Usuário ou e-mail do Twitter</label>
+        <input type="text" id="twitter_user" placeholder="@seuperfil ou email@...">
+      </div>
+      <div class="field">
+        <label>Senha do Twitter</label>
+        <input type="password" id="twitter_pass" placeholder="••••••••">
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">API Keys</div>
+      <div class="field">
+        <label>Chave Anthropic (Claude)</label>
+        <input type="password" id="anthropic_api_key" placeholder="sk-ant-...">
+      </div>
+    </div>
+
+    <button class="btn btn-success" onclick="salvarConfig()">💾 Salvar configurações</button>
+  </div>
+
+  <!-- ── IA ── -->
+  <!-- ── IA ── -->
+  <div class="page" id="page-ia">
+    <div class="page-title">TREINAR IA</div>
+    <div class="page-sub">Escolha o estilo dos comentários</div>
+
+    <div class="card">
+      <div class="card-title">Estilo ativo</div>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px">
+
+        <!-- Card Bíblico -->
+        <div id="card-biblico" class="prompt-option-card active-prompt">
+          <div class="prompt-option-header" onclick="selecionarPrompt('biblico')" style="cursor:pointer">
+            <span class="prompt-option-icon">📖</span>
+            <div style="flex:1">
+              <div class="prompt-option-title">Com Passagem Bíblica</div>
+              <div class="prompt-option-sub">Comentários com versículos contextualizados</div>
+            </div>
+            <div class="prompt-radio" id="radio-biblico">●</div>
+            <button onclick="event.stopPropagation();toggleEditPrompt('biblico')" class="btn-edit-prompt" title="Editar prompt">✏️</button>
+          </div>
+          <div id="edit-biblico" style="display:none;margin-top:12px">
+            <div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;margin-bottom:6px">Variáveis: <span class="var-chip">{autor}</span> <span class="var-chip">{post_text}</span></div>
+            <textarea id="prompt-biblico" rows="12" style="font-size:12px;line-height:1.7;width:100%"></textarea>
+          </div>
+        </div>
+
+        <!-- Card Direto -->
+        <div id="card-direto" class="prompt-option-card">
+          <div class="prompt-option-header" onclick="selecionarPrompt('direto')" style="cursor:pointer">
+            <span class="prompt-option-icon">🔥</span>
+            <div style="flex:1">
+              <div class="prompt-option-title">Direto e Pesado</div>
+              <div class="prompt-option-sub">Estilo Don Corleone espiritual — fala pouco, pesa muito</div>
+            </div>
+            <div class="prompt-radio" id="radio-direto">○</div>
+            <button onclick="event.stopPropagation();toggleEditPrompt('direto')" class="btn-edit-prompt" title="Editar prompt">✏️</button>
+          </div>
+          <div id="edit-direto" style="display:none;margin-top:12px">
+            <div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;margin-bottom:6px">Variáveis: <span class="var-chip">{autor}</span> <span class="var-chip">{post_text}</span></div>
+            <textarea id="prompt-direto" rows="12" style="font-size:12px;line-height:1.7;width:100%"></textarea>
+          </div>
+        </div>
+
+        <!-- Card Personalizado -->
+        <div id="card-custom" class="prompt-option-card">
+          <div class="prompt-option-header" onclick="selecionarPrompt('custom');toggleEditPrompt('custom',true)" style="cursor:pointer">
+            <span class="prompt-option-icon">✏️</span>
+            <div style="flex:1">
+              <div class="prompt-option-title">Personalizado</div>
+              <div class="prompt-option-sub">Escreva seu próprio prompt do zero</div>
+            </div>
+            <div class="prompt-radio" id="radio-custom">○</div>
+          </div>
+          <div id="edit-custom" style="display:none;margin-top:12px">
+            <div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;margin-bottom:6px">Variáveis: <span class="var-chip">{autor}</span> <span class="var-chip">{post_text}</span></div>
+            <textarea id="ai_prompt" rows="12" style="font-size:12px;line-height:1.7;width:100%" placeholder="Escreva seu prompt aqui..."></textarea>
+          </div>
+        </div>
+
+      </div>
+
+      <div id="custom-prompt-area" style="display:none"></div>
+    </div>
+
+    <button class="btn btn-success" style="width:100%" onclick="salvarConfig()">💾 Salvar estilo</button>
+  </div>
+
+  <!-- ── POSTS ── -->
+  <div class="page" id="page-posts">
+    <div class="page-title">GERAR POST</div>
+    <div class="page-sub">Crie posts para o seu feed com IA</div>
+
+    <div class="card">
+      <div class="card-title">Sobre o que você quer postar?</div>
+      <div class="field">
+        <label>Tema ou ideia (opcional — pode deixar em branco para algo do dia)</label>
+        <textarea id="post-tema" rows="3" placeholder="Ex: mercado financeiro caindo, fé nos momentos difíceis, segunda-feira pesada..."></textarea>
+      </div>
+      <div class="field">
+        <label>Tom do post</label>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px" id="tom-options">
+          <button class="tom-btn active" onclick="selectTom(this,'pesado')">🔥 Pesado e direto</button>
+          <button class="tom-btn" onclick="selectTom(this,'inspirador')">⚡ Inspirador</button>
+          <button class="tom-btn" onclick="selectTom(this,'reflexivo')">🤔 Reflexivo</button>
+          <button class="tom-btn" onclick="selectTom(this,'humor')">😄 Com humor</button>
+        </div>
+      </div>
+      <button class="btn btn-run" style="margin-top:8px" onclick="gerarPost()" id="btn-gerar">
+        <div class="btn-inner"><span>✨</span><span>Gerar Post</span></div>
+      </button>
+    </div>
+
+    <div class="card" id="post-resultado-card" style="display:none">
+      <div class="card-title">Post gerado</div>
+      <div id="post-resultado" style="font-size:14px;line-height:1.8;color:var(--text);white-space:pre-wrap"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px">
+        <span id="post-chars" style="font-size:11px;font-family:'DM Mono',monospace;color:var(--muted)"></span>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-secondary" onclick="gerarPost()">↺ Gerar outro</button>
+          <button class="btn btn-primary" onclick="copiarPost()">📋 Copiar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<div class="toast" id="toast">✅ Salvo com sucesso!</div>
+
+<script>
+let cfg = {};
+let users = [];   // array central de usuários — fonte da verdade
+let logEmpty = true;
+let es = null;
+
+const PROMPTS = {
+  biblico: `Você é um homem de 36 anos, brasileiro, cristão de verdade. Fala como alguém que viveu a Bíblia, não como quem a decorou. Tem o peso de quem já errou, já sofreu e encontrou algo real em Deus.
+
+Gere UM comentário para o post de @{autor}:
+---
+{post_text}
+---
+
+REGRAS ABSOLUTAS:
+- MÁXIMO 240 caracteres — nunca passe de 280
+- Inclua UMA passagem bíblica usada de um jeito que surpreenda — não o versículo óbvio
+- Cite como alguém que viveu aquilo, não como quem pregou sobre isso
+- ZERO frases de culto: nada de "Deus abençoe", "glória", "amém irmão"
+- Fale como brasileiro de 36 anos: natural, direto, sem firula
+- Nunca mencione que é IA
+- Responda APENAS com o texto do comentário, sem aspas, sem explicação`,
+
+  direto: `Você é um homem de 36 anos, brasileiro, cristão — não o tipo que fica gritando aleluia, mas o tipo que quando fala sobre fé, todo mundo para pra ouvir. Tem o peso de quem já errou, já sofreu e encontrou algo real em Deus. Pensa no Don Corleone — mas cheio do Espírito Santo. Calmo. Denso. Cada palavra tem peso.
+
+Gere UM comentário para o post de @{autor}:
+---
+{post_text}
+---
+
+SEU JEITO:
+- Frases curtas. Nunca apressado. Cada palavra pesa.
+- Não explica muito — deixa a pessoa pensar
+- Nunca bajula. Fala de igual pra igual.
+- Fala como brasileiro de 36 anos: natural, sem sermão
+
+NUNCA FAZER:
+- NUNCA mais de 240 caracteres
+- NUNCA "Deus abençoe", "glória", "amém" — não é seu estilo
+- NUNCA soar como post motivacional do Instagram
+- NUNCA mencionar que é IA
+
+POR TIPO DE POST:
+- Finanças: entra no assunto e no final deixa uma verdade que vai além do dinheiro
+- Humor: sorri junto, mas deixa algo que pesa de um jeito bom
+- Dor: fala como alguém que também já esteve lá — não consola com versículo fácil
+- Política: discernimento sem partidarismo — perspectiva de quem enxerga mais longe
+
+FORMATO: 1 frase, no máximo 2. Emoji só se inevitável — prefira zero.
+Responda APENAS com o texto do comentário. Sem aspas. Sem explicação.`,
+
+  custom: ``
+};
+
+let promptAtivo = 'biblico';
+const DEFAULT_PROMPT = PROMPTS.biblico;
+
+// ── Navegação ──
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  event.currentTarget.classList.add('active');
+  if (name === 'rodar') atualizarResumo();
+}
+
+// ── Carregar config ──
+async function loadConfig() {
+  const r = await fetch('/api/config');
+  cfg = await r.json();
+  document.getElementById('posts_per_user').value = cfg.posts_per_user;
+  document.getElementById('delay_min').value = cfg.delay_min;
+  document.getElementById('delay_max').value = cfg.delay_max;
+  document.getElementById('anthropic_api_key').value = cfg.anthropic_api_key || '';
+  if (document.getElementById('twitter_user')) document.getElementById('twitter_user').value = cfg.twitter_user || '';
+  if (document.getElementById('twitter_pass')) document.getElementById('twitter_pass').value = cfg.twitter_pass || '';
+  const pa = cfg.prompt_ativo || 'biblico';
+  promptAtivo = pa;
+  if (cfg.prompt_biblico) PROMPTS.biblico = cfg.prompt_biblico;
+  if (cfg.prompt_direto) PROMPTS.direto = cfg.prompt_direto;
+  selecionarPrompt(pa);
+  // Pre-fill textareas
+  const taBiblico = document.getElementById('prompt-biblico');
+  const taDireto = document.getElementById('prompt-direto');
+  if (taBiblico) taBiblico.value = PROMPTS.biblico;
+  if (taDireto) taDireto.value = PROMPTS.direto;
+  if (pa === 'custom') {
+    const taC = document.getElementById('ai_prompt');
+    if (taC) taC.value = cfg.ai_prompt || '';
+  }
+  await carregarPerfisXlsx();
+  atualizarResumo();
+  atualizarHistorico();
+}
+
+// ── Carregar perfis da planilha ──
+async function carregarPerfisXlsx() {
+  // Na versao Render, perfis vem do config
+  try {
+    users = (cfg.target_users || []).map(u => ({
+      perfil: typeof u === 'string' ? u : u,
+      ativo: 'SIM', nicho: '', obs: ''
+    }));
+    renderUsers();
+  } catch(e) { console.error('Erro ao carregar perfis:', e); }
+}
+
+// ── Salvar perfis na planilha ──
+async function salvarPerfisXlsx() {
+  const perfisData = users.map(u => ({
+    perfil: typeof u === 'string' ? u : u.perfil,
+    ativo:  typeof u === 'string' ? 'SIM' : (u.ativo || 'SIM'),
+    nicho:  typeof u === 'string' ? '' : (u.nicho || ''),
+    obs:    typeof u === 'string' ? '' : (u.obs || '')
+  }));
+  const r = await fetch('/api/perfis', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({perfis: perfisData})
+  });
+  return await r.json();
+}
+
+// ── Salvar config ──
+async function salvarConfig() {
+  cfg.posts_per_user = parseInt(document.getElementById('posts_per_user').value);
+  cfg.delay_min = parseFloat(document.getElementById('delay_min').value);
+  cfg.delay_max = parseFloat(document.getElementById('delay_max').value);
+  cfg.anthropic_api_key = document.getElementById('anthropic_api_key').value.trim();
+  const twUser = document.getElementById('twitter_user');
+  const twPass = document.getElementById('twitter_pass');
+  if (twUser) cfg.twitter_user = twUser.value.trim();
+  if (twPass) cfg.twitter_pass = twPass.value;
+  // Save edited prompts back to PROMPTS object
+  const taBiblico = document.getElementById('prompt-biblico');
+  const taDireto = document.getElementById('prompt-direto');
+  const taCustom = document.getElementById('ai_prompt');
+  if (taBiblico && taBiblico.value) PROMPTS.biblico = taBiblico.value;
+  if (taDireto && taDireto.value) PROMPTS.direto = taDireto.value;
+  cfg.ai_prompt = PROMPTS[promptAtivo] || (taCustom ? taCustom.value : '');
+  cfg.prompt_ativo = promptAtivo;
+  cfg.prompt_biblico = PROMPTS.biblico;
+  cfg.prompt_direto = PROMPTS.direto;
+  await fetch('/api/config', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(cfg)
+  });
+  await salvarPerfisXlsx();
+  showToast();
+  atualizarResumo();
+}
+
+// ── Usuários ──
+function getNome(u) { return typeof u === 'string' ? u : u.perfil; }
+function getAtivo(u) { return typeof u === 'string' ? 'SIM' : (u.ativo || 'SIM'); }
+
+function renderUsers() {
+  const list = document.getElementById('users-list');
+  const countEl = document.getElementById('users-count');
+  list.innerHTML = '';
+
+  const ativos = users.filter(u => getAtivo(u) === 'SIM').length;
+  if (countEl) countEl.textContent = `${users.length} perfis · ${ativos} ativos`;
+
+  users.forEach((u, i) => {
+    const nome = getNome(u);
+    const ativo = getAtivo(u);
+    const nicho = typeof u === 'string' ? '' : (u.nicho || '');
+    const letra = nome.charAt(0).toUpperCase();
+    const checked = ativo === 'SIM' ? 'checked' : '';
+
+    const div = document.createElement('div');
+    div.className = 'user-item' + (ativo !== 'SIM' ? ' inativo' : '');
+    div.innerHTML = `
+      <div class="user-avatar">${letra}</div>
+      <div class="user-info">
+        <div class="user-name"><span>@</span>${nome}</div>
+        ${nicho ? `<div class="user-nicho">${nicho}</div>` : ''}
+      </div>
+      <div class="user-actions">
+        <label class="toggle-switch" title="${ativo === 'SIM' ? 'Desativar' : 'Ativar'}">
+          <input type="checkbox" ${checked} onchange="toggleUser(${i})">
+          <div class="toggle-track"></div>
+          <div class="toggle-thumb"></div>
+        </label>
+        <button class="btn-remove" onclick="removeUser(${i})" title="Remover">✕</button>
+      </div>
+    `;
+    list.appendChild(div);
+  });
+}
+
+function toggleUser(i) {
+  if (typeof users[i] === 'string') {
+    users[i] = { perfil: users[i], ativo: 'NAO', nicho: '', obs: '' };
+  } else {
+    users[i].ativo = users[i].ativo === 'SIM' ? 'NAO' : 'SIM';
+  }
+  renderUsers();
+}
+
+function ativarTodos() {
+  users = users.map(u => typeof u === 'string'
+    ? { perfil: u, ativo: 'SIM', nicho: '', obs: '' }
+    : { ...u, ativo: 'SIM' });
+  renderUsers();
+}
+
+function desativarTodos() {
+  users = users.map(u => typeof u === 'string'
+    ? { perfil: u, ativo: 'NAO', nicho: '', obs: '' }
+    : { ...u, ativo: 'NAO' });
+  renderUsers();
+}
+
+function addUser() {
+  const input = document.getElementById('new-user');
+  let user = input.value.trim().replace(/^@/, '');
+  if (!user) return;
+  const nomes = users.map(u => getNome(u));
+  if (nomes.includes(user)) { input.value = ''; return; }
+  users.push({ perfil: user, ativo: 'SIM', nicho: '', obs: '' });
+  renderUsers();
+  input.value = '';
+}
+
+function removeUser(i) {
+  users.splice(i, 1);
+  renderUsers();
+}
+
+async function salvarPerfisEConfig() {
+  await salvarPerfisConfig();
+}
+
+async function salvarPerfisConfig() {
+  cfg.target_users = users.map(u => typeof u === 'string' ? u : u.perfil).filter(u => {
+    const obj = users.find(x => (typeof x === 'string' ? x : x.perfil) === u);
+    return typeof obj === 'string' ? true : obj.ativo === 'SIM';
+  });
+  const r = await fetch('/api/config', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(cfg)
+  });
+  const d = await r.json();
+  if (d.ok) showToast('✅ Perfis salvos!');
+  else showToast('❌ Erro ao salvar!');
+  atualizarResumo();
+}
+
+// ── Stepper ──
+function step(id, delta) {
+  const el = document.getElementById(id);
+  el.value = Math.max(1, parseInt(el.value) + delta);
+}
+
+// ── Resumo ──
+function atualizarResumo() {
+  const ativos = users.filter(u => (typeof u === 'string' ? true : u.ativo === 'SIM')).map(u => getNome(u));
+  const html = `
+    👥 Perfis ativos: <strong style="color:var(--text)">${ativos.join(', ') || '—'}</strong><br>
+    📝 Posts por perfil: <strong style="color:var(--text)">${cfg.posts_per_user || 3}</strong><br>
+    ⏳ Delay: <strong style="color:var(--text)">${cfg.delay_min}s – ${cfg.delay_max}s</strong><br>
+    🔑 API Key: <strong style="color:var(--text)">${cfg.anthropic_api_key ? '••••••••' + cfg.anthropic_api_key.slice(-6) : 'não definida'}</strong>
+  `;
+  document.getElementById('resumo').innerHTML = html;
+}
+
+// ── Histórico ──
+async function atualizarHistorico() {
+  const r = await fetch('/api/historico/count');
+  const d = await r.json();
+  document.getElementById('hist-count').textContent = d.count;
+}
+
+async function limparHistorico() {
+  if (!confirm('Limpar o histórico? O bot poderá comentar novamente nos mesmos posts.')) return;
+  await fetch('/api/historico/limpar', {method:'POST'});
+  document.getElementById('hist-count').textContent = '0';
+  showToast('🗑 Histórico limpo!');
+}
+
+// ── Prompt padrão ──
+function resetPrompt() {
+  if (!confirm('Restaurar o prompt padrão?')) return;
+  document.getElementById('ai_prompt').value = PROMPTS.biblico;
+}
+
+function selecionarPrompt(tipo) {
+  promptAtivo = tipo;
+  ['biblico','direto','custom'].forEach(t => {
+    document.getElementById('card-' + t).classList.remove('active-prompt');
+    document.getElementById('radio-' + t).textContent = '○';
+  });
+  document.getElementById('card-' + tipo).classList.add('active-prompt');
+  document.getElementById('radio-' + tipo).textContent = '●';
+  if (tipo === 'custom') toggleEditPrompt('custom', true);
+}
+
+function toggleEditPrompt(tipo, forceOpen) {
+  const area = document.getElementById('edit-' + tipo);
+  const isOpen = area.style.display !== 'none';
+  if (forceOpen) { area.style.display = 'block'; }
+  else { area.style.display = isOpen ? 'none' : 'block'; }
+  // Populate textarea with current prompt
+  const ta = document.getElementById('prompt-' + tipo) || document.getElementById('ai_prompt');
+  if (ta && !ta.value) ta.value = PROMPTS[tipo] || '';
+}
+
+let tomSelecionado = 'pesado';
+
+function selectTom(btn, tom) {
+  tomSelecionado = tom;
+  document.querySelectorAll('.tom-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+async function gerarPost() {
+  const tema = document.getElementById('post-tema').value.trim();
+  const btn = document.getElementById('btn-gerar');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="btn-inner"><div class="spin"></div><span>Gerando...</span></div>';
+
+  const toms = {
+    pesado: 'pesado, direto, com peso — estilo Don Corleone espiritual',
+    inspirador: 'inspirador e poderoso, que levanta a pessoa',
+    reflexivo: 'reflexivo e profundo, que faz pensar',
+    humor: 'com humor inteligente e uma pitada espiritual'
+  };
+
+  const prompt = `Você é um homem de 36 anos, brasileiro, cristão de verdade. Tem o peso de quem já errou, já sofreu e encontrou algo real em Deus. Fala pouco mas quando fala, todo mundo para. Estilo: ${toms[tomSelecionado]}.
+
+Crie UM post para o Twitter/X ${tema ? 'sobre: ' + tema : 'sobre algo relevante para hoje — pode ser fé, finanças, vida, trabalho ou o momento atual do Brasil'}.
+
+REGRAS:
+- MÁXIMO 260 caracteres — respeite o limite do Twitter
+- Tom: ${toms[tomSelecionado]}
+- Fale como brasileiro de 36 anos: direto, sem firula, sem sermão
+- ZERO frases de culto: nada de "Deus abençoe", "glória", "amém irmão"
+- Pode ou não incluir versículo — só se encaixar naturalmente
+- Não use hashtags
+- Nunca mencione que é IA
+- Responda APENAS com o texto do post, sem aspas, sem explicação`;
+
+  try {
+    const r = await fetch('/api/gerar-post', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt })
+    });
+    const d = await r.json();
+    if (!d.ok) { alert('Erro: ' + (d.erro || 'Tente novamente.')); return; }
+    const texto = d.texto;
+    document.getElementById('post-resultado').textContent = texto;
+    const chars = texto.length;
+    const cor = chars > 280 ? 'var(--red)' : chars > 250 ? 'var(--yellow)' : 'var(--green)';
+    document.getElementById('post-chars').innerHTML = `<span style="color:${cor};font-weight:700">${chars}</span> / 280 caracteres`;
+    document.getElementById('post-resultado-card').style.display = 'block';
+  } catch(e) {
+    alert('Erro ao gerar post. Verifique se o app está rodando.');
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '<div class="btn-inner"><span>✨</span><span>Gerar Post</span></div>';
+}
+
+function copiarPost() {
+  const texto = document.getElementById('post-resultado').textContent;
+  navigator.clipboard.writeText(texto).then(() => showToast('📋 Copiado!'));
+}
+
+// ── Toast ──
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg || '✅ Salvo com sucesso!';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ── Logs ──
+function addLog(msg) {
+  const body = document.getElementById('log-body');
+  if (logEmpty) { body.innerHTML = ''; logEmpty = false; }
+  const d = document.createElement('div');
+  d.className = 'll';
+  if (msg.includes('✅')||msg.includes('🎉')||msg.includes('Postado')||msg.includes('conectado')) d.classList.add('ok');
+  else if (msg.includes('❌')) d.classList.add('err');
+  else if (msg.includes('🤖')||msg.includes('💬')||msg.includes('👤')||msg.includes('🔌')) d.classList.add('inf');
+  else if (msg.includes('⚠️')||msg.includes('⏳')||msg.includes('⏭️')||msg.includes('📌')) d.classList.add('wrn');
+  d.textContent = msg;
+  body.appendChild(d);
+  body.scrollTop = body.scrollHeight;
+}
+
+function setStatus(state, text) {
+  document.getElementById('dot').className = 'dot ' + state;
+  document.getElementById('status-text').textContent = text;
+}
+
+// ── Rodar ──
+async function rodar() {
+  const btn = document.getElementById('btn-run');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spin"></div><span>Rodando...</span>';
+  document.getElementById('log-body').innerHTML = '';
+  logEmpty = false;
+  setStatus('running', 'Bot rodando...');
+
+  if (es) es.close();
+  es = new EventSource('/api/logs');
+  es.onmessage = e => {
+    if (e.data === 'ping') return;
+    if (e.data === 'DONE') {
+      es.close();
+      btn.disabled = false;
+      btn.innerHTML = '<span>▶</span><span>Iniciar Bot</span>';
+      setStatus('done', 'Finalizado!');
+      atualizarHistorico();
+      return;
+    }
+    addLog(e.data);
+  };
+  es.onerror = () => setStatus('error', 'Erro na conexão');
+
+  const r = await fetch('/api/rodar', {method:'POST'});
+  const d = await r.json();
+  if (d.error) {
+    addLog('❌ ' + d.error);
+    btn.disabled = false;
+    btn.innerHTML = '<span>▶</span><span>Iniciar Bot</span>';
+    setStatus('error', d.error);
+    es.close();
+  }
+}
+
+// ── Dashboard ──
+async function carregarDashboard() {
+  try {
+    const r = await fetch('/api/dashboard');
+    const d = await r.json();
+
+    // Métricas
+    document.getElementById('dash-hoje').textContent = d.hoje;
+    document.getElementById('dash-semana').textContent = d.semana;
+    document.getElementById('dash-mes').textContent = d.mes;
+    document.getElementById('dash-total').textContent = d.total;
+    document.getElementById('dash-hoje-sub').textContent = d.hoje >= 20 ? '⚠️ limite atingido' : d.hoje >= 15 ? '⚠️ quase no limite' : 'comentários hoje';
+    if (document.getElementById('dash-semana-sub')) document.getElementById('dash-semana-sub').textContent = `~${d.media_diaria_mes}/dia este mes`;
+
+    // Alerta
+    if (d.alerta) document.getElementById('alerta-banner').style.display = 'block';
+
+    // Barras de limite
+    const pctHoje = Math.min(d.hoje / 20 * 100, 100);
+    const pctSemana = Math.min(d.semana / 80 * 100, 100);
+    const pctMes = Math.min(d.mes / 300 * 100, 100);
+
+    document.getElementById('barra-hoje').style.width = pctHoje + '%';
+    document.getElementById('barra-hoje').style.background = pctHoje >= 100 ? 'var(--red)' : pctHoje >= 75 ? 'var(--yellow)' : 'var(--green)';
+    document.getElementById('barra-semana').style.width = pctSemana + '%';
+    document.getElementById('barra-semana').style.background = pctSemana >= 100 ? 'var(--red)' : pctSemana >= 75 ? 'var(--yellow)' : 'var(--accent)';
+    document.getElementById('barra-mes').style.width = pctMes + '%';
+    document.getElementById('barra-mes').style.background = pctMes >= 100 ? 'var(--red)' : pctMes >= 75 ? 'var(--yellow)' : '#7c6aff';
+
+    document.getElementById('num-hoje').textContent = d.hoje;
+    document.getElementById('num-semana').textContent = d.semana;
+    document.getElementById('num-mes').textContent = d.mes;
+
+    // Gráfico 30 dias
+    const chart = document.getElementById('chart-30dias');
+    chart.innerHTML = '';
+    const max = Math.max(...d.ultimos_30.map(x => x.count), 1);
+    const hoje_str = new Date().toISOString().slice(0,10);
+    d.ultimos_30.forEach(item => {
+      const bar = document.createElement('div');
+      bar.className = 'chart-bar';
+      bar.style.height = (item.count / max * 100) + '%';
+      bar.title = item.dia + ': ' + item.count + ' comentários';
+      if (item.dia === hoje_str) bar.dataset.today = 'true';
+      chart.appendChild(bar);
+    });
+    if (d.ultimos_30.length > 0) {
+      document.getElementById('chart-label-inicio').textContent = d.ultimos_30[0].dia.slice(5);
+    }
+
+    // Ranking perfis
+    const ranking = document.getElementById('ranking-perfis');
+    if (!d.por_perfil.length) {
+      ranking.innerHTML = '<div style="color:var(--muted);font-size:13px;font-family:DM Mono,monospace">Nenhum dado ainda...</div>';
+    } else {
+      const maxP = d.por_perfil[0].count;
+      ranking.innerHTML = d.por_perfil.map((p, i) => `
+        <div class="perfil-bar-row">
+          <div class="perfil-bar-nome">${i===0?'🥇':i===1?'🥈':i===2?'🥉':'  '} @${p.perfil}</div>
+          <div class="perfil-bar-track">
+            <div class="perfil-bar-fill" style="width:${p.count/maxP*100}%"></div>
+          </div>
+          <div class="perfil-bar-count">${p.count}</div>
+        </div>
+      `).join('');
+    }
+  } catch(e) { console.error('Erro ao carregar dashboard:', e); }
+}
+
+// ── Init ──
+loadConfig();
+carregarDashboard();
+setInterval(atualizarHistorico, 10000);
+setInterval(carregarDashboard, 30000);
+</script>
+</body>
+</html>
