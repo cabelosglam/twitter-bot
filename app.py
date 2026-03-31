@@ -350,10 +350,13 @@ async def rodar_bot(cfg):
 
     try:
         async with async_playwright() as p:
+            import os
+            os.environ["PLAYWRIGHT_BROWSERS_PATH"] = "/opt/render/project/src/.playwright"
             browser = await p.chromium.launch(
                 headless=True,
                 args=["--no-sandbox", "--disable-setuid-sandbox",
-                      "--disable-dev-shm-usage", "--disable-gpu"]
+                      "--disable-dev-shm-usage", "--disable-gpu",
+                      "--single-process"]
             )
             context = await browser.new_context(
                 user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
