@@ -12,6 +12,8 @@ import anthropic
 from datetime import datetime, timezone
 from playwright.async_api import async_playwright
 
+import autoposter
+
 app = Flask(__name__)
 
 # ── Arquivos de dados (usando /tmp no Render pois o filesystem e efemero)
@@ -172,6 +174,9 @@ def log(msg):
     log_queue.put(msg)
     print(msg)
 
+# O autoposter manda as mensagens dele para o mesmo painel de logs
+autoposter.set_logger(lambda m: log_queue.put(f"📅 {m}"))
+
 def gerar_comentario(post_text, autor, cfg):
     client = anthropic.Anthropic(api_key=cfg["anthropic_api_key"])
     tipo = cfg.get("prompt_ativo", "direto")
@@ -183,7 +188,7 @@ def gerar_comentario(post_text, autor, cfg):
         base = cfg.get("prompt_direto") or PROMPT_DIRETO
     prompt = base.format(post_text=post_text[:800], autor=autor)
     msg = client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model="claude-opus-5-5",
         max_tokens=150,
         messages=[{"role": "user", "content": prompt}]
     )
@@ -444,7 +449,7 @@ def gerar_post_route():
     try:
         client = anthropic.Anthropic(api_key=cfg["anthropic_api_key"])
         msg = client.messages.create(
-            model="claude-sonnet-4-20250514",
+            model="claude-opus-5-5",
             max_tokens=300,
             messages=[{"role": "user", "content": data.get("prompt", "")}]
         )
@@ -476,6 +481,117 @@ def logs():
                 if msg == "DONE": break
             except queue.Empty: yield "data: ping\n\n"
     return Response(stream(), mimetype="text/event-stream")
+
+# ─────────────────────────────────────────
+#  ROTAS — AUTOPOSTAGEM (posts proprios, 3x/dia)
+# ─────────────────────────────────────────
+
+@app.route("/api/posts/config", methods=["GET"])
+def posts_get_config():
+    return jsonify(autoposter.config_publica())
+
+
+@app.route("/api/posts/config", methods=["POST"])
+def posts_set_config():
+    dados = request.json or {}
+    if "horarios" in dados:
+        horarios = []
+        for h in dados["horarios"]:
+            h = str(h).strip()
+            try:
+                hh, mm = [int(x) for x in h.split(":")]
+                if not (0 <= hh <= 23 and 0 <= mm <= 59):
+                    raise ValueError
+                horarios.append(f"{hh:02d}:{mm:02d}")
+            except Exception:
+                return jsonify({"ok": False, "erro": f"horario invalido: {h}"}), 400
+        if not horarios:
+            return jsonify({"ok": False, "erro": "informe ao menos um horario"}), 400
+        dados["horarios"] = sorted(set(horarios))
+    if "max_chars" in dados:
+        try:
+            dados["max_chars"] = max(80, min(280, int(dados["max_chars"])))
+        except Exception:
+            return jsonify({"ok": False, "erro": "max_chars invalido"}), 400
+    autoposter.salvar_config(dados)
+    autoposter.recarregar_jobs()
+    return jsonify({"ok": True, "config": autoposter.config_publica(),
+                    "status": autoposter.status()})
+
+
+@app.route("/api/posts/status")
+def posts_status():
+    return jsonify(autoposter.status())
+
+
+@app.route("/api/posts/historico")
+def posts_historico():
+    hist = autoposter.carregar_historico()
+    return jsonify({"itens": list(reversed(hist[-100:])), "total": len(hist)})
+
+
+@app.route("/api/posts/historico/limpar", methods=["POST"])
+def posts_limpar():
+    autoposter.salvar_historico([])
+    return jsonify({"ok": True})
+
+
+@app.route("/api/posts/preview", methods=["POST"])
+def posts_preview():
+    """Gera um post e devolve o texto SEM publicar."""
+    dados = request.json or {}
+    try:
+        r = autoposter.gerar_post(tema=(dados.get("tema") or None))
+        return jsonify({"ok": True, **r, "chars": len(r["texto"])})
+    except Exception as e:
+        return jsonify({"ok": False, "erro": str(e)}), 500
+
+
+@app.route("/api/posts/publicar", methods=["POST"])
+def posts_publicar():
+    """Gera e publica agora, fora dos horarios (nao consome o slot do dia)."""
+    dados = request.json or {}
+    if dados.get("texto"):
+        try:
+            tweet_id, url = autoposter.publicar(dados["texto"].strip())
+            r = autoposter.registrar({
+                "ts": autoposter.agora(autoposter.carregar_config()).isoformat(),
+                "slot": None, "origem": "manual", "tema": dados.get("tema"),
+                "texto": dados["texto"].strip(), "status": "publicado",
+                "tweet_id": tweet_id, "url": url})
+            return jsonify({"ok": True, **r})
+        except Exception as e:
+            return jsonify({"ok": False, "erro": str(e)}), 500
+    r = autoposter.executar_ciclo(origem="manual", forcar=True,
+                                  tema=(dados.get("tema") or None))
+    return (jsonify(r), 200 if r.get("ok") else 500)
+
+
+@app.route("/api/posts/cron", methods=["GET", "POST"])
+def posts_cron():
+    """Gatilho externo (cron-job.org, UptimeRobot, Render Cron Job).
+
+    Protegido pelo CRON_TOKEN. Serve para o caso do plano Free do Render, em
+    que o servico hiberna e o scheduler interno para de rodar.
+    """
+    cfg = autoposter.carregar_config()
+    esperado = cfg.get("cron_token")
+    enviado = (request.args.get("token")
+               or request.headers.get("X-Cron-Token", ""))
+    if not esperado:
+        return jsonify({"ok": False, "erro": "CRON_TOKEN nao configurado"}), 503
+    if enviado != esperado:
+        return jsonify({"ok": False, "erro": "token invalido"}), 403
+    r = autoposter.executar_ciclo(origem="cron")
+    return jsonify(r)
+
+
+# Liga o scheduler ao subir o app (vale para gunicorn e para `python app.py`)
+try:
+    autoposter.iniciar_scheduler()
+except Exception as _e:
+    print(f"[autoposter] nao consegui iniciar o scheduler: {_e}", flush=True)
+
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))

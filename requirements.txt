@@ -1,3 +1,6 @@
 flask==3.0.3
+gunicorn==27.0.1
+anthropic==2.12.0
+tweepy==4.17.0
+APScheduler==3.11.3
 playwright==1.44.0
-anthropic==0.28.0

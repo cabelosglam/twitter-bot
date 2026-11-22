@@ -555,6 +555,65 @@ label {
   .main { margin-left: 60px; max-width: calc(100% - 60px); padding: 24px 20px; }
   .grid-2 { grid-template-columns: 1fr; }
 }
+
+/* ── AUTO POSTS ── */
+.auto-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap;
+}
+.auto-pill {
+  font-family: 'DM Mono', monospace; font-size: 11px;
+  padding: 5px 11px; border-radius: 20px;
+  border: 1px solid var(--border); color: var(--muted);
+  text-transform: uppercase; letter-spacing: .5px;
+}
+.auto-pill.on  { border-color: var(--green);  color: var(--green);  background: rgba(52,211,153,.08); }
+.auto-pill.off { border-color: var(--muted);  color: var(--muted); }
+.auto-pill.bad { border-color: var(--red);    color: var(--red);    background: rgba(248,113,113,.08); }
+
+.horario-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.horario-row input[type=time] {
+  background: var(--s2); border: 1px solid var(--border); border-radius: 8px;
+  color: var(--text); padding: 9px 12px; font-family: 'DM Mono', monospace;
+  font-size: 14px; width: 145px;
+}
+.horario-row .slot-tag {
+  font-family: 'DM Mono', monospace; font-size: 11px; color: var(--lighter);
+}
+
+.cred-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 760px) { .cred-grid, .grid-2 { grid-template-columns: 1fr; } }
+
+.cred-ok   { color: var(--green); font-family: 'DM Mono', monospace; font-size: 11px; }
+.cred-miss { color: var(--red);   font-family: 'DM Mono', monospace; font-size: 11px; }
+
+.post-item {
+  border: 1px solid var(--border); border-radius: 10px;
+  padding: 13px 15px; margin-bottom: 10px; background: var(--s2);
+}
+.post-item.erro { border-color: rgba(248,113,113,.4); background: rgba(248,113,113,.04); }
+.post-item-top {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 10px; margin-bottom: 8px;
+  font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted);
+}
+.post-item-txt { font-size: 14px; line-height: 1.65; white-space: pre-wrap; }
+.post-item-tema {
+  font-size: 11px; color: var(--lighter); margin-top: 8px;
+  font-family: 'DM Mono', monospace;
+}
+.post-item a { color: var(--accent); text-decoration: none; }
+.post-item a:hover { text-decoration: underline; }
+
+.hint {
+  font-size: 12px; color: var(--muted); line-height: 1.7;
+  font-family: 'DM Mono', monospace;
+}
+.hint code {
+  background: var(--s2); border: 1px solid var(--border);
+  padding: 1px 5px; border-radius: 4px; color: var(--accent);
+  font-size: 11px; word-break: break-all;
+}
 </style>
 </head>
 <body>
@@ -590,6 +649,10 @@ label {
     <div class="nav-item" onclick="showPage('posts')">
       <span class="nav-icon">✍️</span>
       <span>Gerar Post</span>
+    </div>
+    <div class="nav-item" onclick="showPage('auto')">
+      <span class="nav-icon">📅</span>
+      <span>Auto Posts</span>
     </div>
   </nav>
 
@@ -901,6 +964,152 @@ label {
     </div>
   </div>
 
+  <!-- ── AUTO POSTS ── -->
+  <div class="page" id="page-auto">
+    <div class="page-title">AUTO POSTS</div>
+    <div class="page-sub">Posts de finanças pessoais publicados sozinhos, 3x por dia</div>
+
+    <div class="card">
+      <div class="auto-head">
+        <div>
+          <div class="card-title" style="margin-bottom:6px">Publicação automática</div>
+          <div class="hint" id="auto-resumo">carregando...</div>
+        </div>
+        <label class="toggle-switch" title="Ligar / desligar">
+          <input type="checkbox" id="auto-ativo" onchange="autoToggle()">
+          <div class="toggle-track"></div>
+          <div class="toggle-thumb"></div>
+        </label>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px">
+        <span class="auto-pill" id="pill-estado">—</span>
+        <span class="auto-pill" id="pill-cred">—</span>
+        <span class="auto-pill" id="pill-hoje">—</span>
+        <span class="auto-pill" id="pill-prox">—</span>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">🕐 Horários do dia</div>
+        <div id="horarios-lista"></div>
+        <button class="btn btn-secondary" style="width:100%;margin-top:4px" onclick="addHorario()">+ Adicionar horário</button>
+        <div class="field" style="margin-top:18px">
+          <label>Fuso horário</label>
+          <select id="auto-tz">
+            <option value="America/Sao_Paulo">America/Sao_Paulo (Brasília)</option>
+            <option value="America/Manaus">America/Manaus</option>
+            <option value="America/Belem">America/Belem</option>
+            <option value="America/Cuiaba">America/Cuiaba</option>
+            <option value="America/Fortaleza">America/Fortaleza</option>
+            <option value="UTC">UTC</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">✍️ Como o texto é gerado</div>
+        <div class="field">
+          <label>Limite de caracteres (o X aceita até 280)</label>
+          <input type="number" id="auto-maxchars" min="80" max="280">
+        </div>
+        <div class="field">
+          <label>Modelo</label>
+          <select id="auto-modelo">
+            <option value="claude-opus-5-5">Claude Opus 5.5 — melhor escrita</option>
+            <option value="claude-sonnet-5-5">Claude Sonnet 5.5 — mais barato</option>
+            <option value="claude-haiku-5-5">Claude Haiku 5.5 — o mais barato</option>
+          </select>
+        </div>
+        <div class="field">
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+            <input type="checkbox" id="auto-hashtags" style="width:auto;margin:0">
+            <span>Permitir uma hashtag por post</span>
+          </label>
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label>Temas (um por linha — o bot sorteia sem repetir os recentes)</label>
+          <textarea id="auto-temas" rows="7" placeholder="reserva de emergência&#10;sair do rotativo do cartão..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🔑 Credenciais</div>
+      <div class="hint" style="margin-bottom:14px">
+        O ideal é deixar isso nas variáveis de ambiente do Render — o disco é apagado
+        a cada deploy. O que você digitar aqui fica salvo só até o próximo restart.
+        Campos em branco não apagam o que já está guardado.
+      </div>
+      <div class="cred-grid">
+        <div class="field">
+          <label>Anthropic API Key <span id="c-anthropic"></span></label>
+          <input type="password" id="auto-anthropic" placeholder="sk-ant-...">
+        </div>
+        <div class="field">
+          <label>X — API Key <span id="c-xkey"></span></label>
+          <input type="password" id="auto-xkey" placeholder="consumer key">
+        </div>
+        <div class="field">
+          <label>X — API Key Secret <span id="c-xsecret"></span></label>
+          <input type="password" id="auto-xsecret" placeholder="consumer secret">
+        </div>
+        <div class="field">
+          <label>X — Access Token <span id="c-xtoken"></span></label>
+          <input type="password" id="auto-xtoken" placeholder="access token">
+        </div>
+        <div class="field">
+          <label>X — Access Token Secret <span id="c-xtokensecret"></span></label>
+          <input type="password" id="auto-xtokensecret" placeholder="access token secret">
+        </div>
+        <div class="field">
+          <label>Token do gatilho externo <span id="c-cron"></span></label>
+          <input type="password" id="auto-crontoken" placeholder="texto aleatório longo">
+        </div>
+      </div>
+      <div class="hint" id="cron-url-box" style="margin-top:4px"></div>
+    </div>
+
+    <button class="btn btn-success" style="width:100%" onclick="autoSalvar()">💾 Salvar configuração</button>
+
+    <div class="card" style="margin-top:20px">
+      <div class="card-title">🧪 Testar antes</div>
+      <div class="hint" style="margin-bottom:14px">
+        Gerar não publica nada — serve para você ver o texto que sairia.
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:stretch">
+        <button class="btn btn-primary" onclick="autoPreview()" id="btn-auto-preview">✨ Gerar sem publicar</button>
+        <button class="btn btn-run" style="width:auto;flex:0 0 auto" onclick="autoPublicarAgora()" id="btn-auto-pub">
+          <div class="btn-inner"><span>🚀</span><span>Publicar agora</span></div>
+        </button>
+      </div>
+      <div id="auto-preview-box" style="display:none;margin-top:16px">
+        <div class="post-item">
+          <div class="post-item-top">
+            <span id="auto-preview-chars"></span>
+            <span>prévia — não publicado</span>
+          </div>
+          <div class="post-item-txt" id="auto-preview-txt"></div>
+          <div class="post-item-tema" id="auto-preview-tema"></div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-secondary" onclick="autoPreview()">↺ Gerar outro</button>
+          <button class="btn btn-primary" onclick="autoPublicarPreview()">🚀 Publicar esse</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="auto-head" style="margin-bottom:14px">
+        <div class="card-title" style="margin:0">📜 Histórico</div>
+        <button class="btn-clear" style="width:auto;padding:6px 12px;margin:0" onclick="autoLimparHist()">Limpar</button>
+      </div>
+      <div id="auto-historico">
+        <div class="hint">Nenhum post ainda.</div>
+      </div>
+    </div>
+  </div>
+
 </main>
 
 <div class="toast" id="toast">✅ Salvo com sucesso!</div>
@@ -969,6 +1178,7 @@ function showPage(name) {
   document.getElementById('page-' + name).classList.add('active');
   event.currentTarget.classList.add('active');
   if (name === 'rodar') atualizarResumo();
+  if (name === 'auto') autoCarregar();
 }
 
 // ── Carregar config ──
@@ -1412,6 +1622,257 @@ async function carregarDashboard() {
 }
 
 // ── Init ──
+
+// ══════════════════════════════════════════
+//  AUTO POSTS
+// ══════════════════════════════════════════
+
+let autoCfg = {};
+let autoPreviewAtual = null;
+let autoTimer = null;
+
+function hhmmLocal(iso) {
+  if (!iso) return '—';
+  try {
+    return new Date(iso).toLocaleString('pt-BR',
+      { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  } catch (e) { return iso; }
+}
+
+function renderHorarios(lista) {
+  const box = document.getElementById('horarios-lista');
+  box.innerHTML = '';
+  (lista || []).forEach((h, i) => {
+    const row = document.createElement('div');
+    row.className = 'horario-row';
+    row.innerHTML =
+      `<input type="time" value="${h}">` +
+      `<span class="slot-tag">post ${i + 1}</span>` +
+      `<button class="btn-remove" title="Remover" onclick="this.parentElement.remove()">✕</button>`;
+    box.appendChild(row);
+  });
+}
+
+function lerHorarios() {
+  return [...document.querySelectorAll('#horarios-lista input[type=time]')]
+    .map(i => i.value).filter(Boolean);
+}
+
+function addHorario() {
+  const atuais = lerHorarios();
+  atuais.push('12:00');
+  renderHorarios(atuais);
+}
+
+function marcarCred(id, ok) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.className = ok ? 'cred-ok' : 'cred-miss';
+  el.textContent = ok ? '• salva' : '• faltando';
+}
+
+async function autoCarregar() {
+  try {
+    const r = await fetch('/api/posts/config');
+    autoCfg = await r.json();
+  } catch (e) { showToast('❌ Não consegui carregar a configuração'); return; }
+
+  document.getElementById('auto-ativo').checked   = !!autoCfg.ativo;
+  document.getElementById('auto-tz').value        = autoCfg.timezone || 'America/Sao_Paulo';
+  document.getElementById('auto-maxchars').value  = autoCfg.max_chars || 275;
+  document.getElementById('auto-modelo').value    = autoCfg.modelo || 'claude-opus-5-5';
+  document.getElementById('auto-hashtags').checked = !!autoCfg.hashtags;
+  document.getElementById('auto-temas').value     = (autoCfg.temas || []).join('\n');
+  renderHorarios(autoCfg.horarios);
+
+  const c = autoCfg.credenciais || {};
+  marcarCred('c-anthropic',     c.anthropic_api_key);
+  marcarCred('c-xkey',          c.x_api_key);
+  marcarCred('c-xsecret',       c.x_api_secret);
+  marcarCred('c-xtoken',        c.x_access_token);
+  marcarCred('c-xtokensecret',  c.x_access_token_secret);
+  marcarCred('c-cron',          c.cron_token);
+
+  document.getElementById('cron-url-box').innerHTML = c.cron_token
+    ? `Gatilho externo: <code>${location.origin}/api/posts/cron?token=SEU_TOKEN</code> — chame nos horários por um serviço de cron se o app hibernar.`
+    : 'Sem token de gatilho, a rota <code>/api/posts/cron</code> fica desligada.';
+
+  autoStatus();
+  autoHistorico();
+  clearInterval(autoTimer);
+  autoTimer = setInterval(autoStatus, 30000);
+}
+
+async function autoStatus() {
+  let st;
+  try { st = await (await fetch('/api/posts/status')).json(); } catch (e) { return; }
+
+  const pe = document.getElementById('pill-estado');
+  pe.textContent = st.ativo ? 'ligado' : 'desligado';
+  pe.className = 'auto-pill ' + (st.ativo ? 'on' : 'off');
+
+  const pc = document.getElementById('pill-cred');
+  pc.textContent = st.pronto ? 'credenciais ok' : 'faltam credenciais';
+  pc.className = 'auto-pill ' + (st.pronto ? 'on' : 'bad');
+
+  const ph = document.getElementById('pill-hoje');
+  ph.textContent = `${st.publicados_hoje} de ${(st.horarios || []).length} hoje`;
+  ph.className = 'auto-pill' + (st.publicados_hoje > 0 ? ' on' : '');
+
+  const prox = (st.jobs || [])[0];
+  const pp = document.getElementById('pill-prox');
+  pp.textContent = prox ? 'próximo ' + hhmmLocal(prox.proximo) : 'nada agendado';
+  pp.className = 'auto-pill' + (prox ? '' : ' off');
+
+  let resumo;
+  if (!st.pronto) {
+    resumo = 'Preencha as credenciais abaixo para começar.';
+  } else if (!st.ativo) {
+    resumo = 'Tudo configurado. Ligue a chave para começar a publicar.';
+  } else {
+    resumo = `Publicando ${(st.horarios || []).join(', ')} (${st.timezone}). ` +
+             `${st.total_publicados} post(s) no total` +
+             (st.total_erros ? `, ${st.total_erros} erro(s).` : '.');
+  }
+  if (st.ativo && !st.scheduler_ligado) resumo += ' ⚠️ O agendador não está rodando neste processo.';
+  document.getElementById('auto-resumo').textContent = resumo;
+}
+
+async function autoToggle() {
+  const ativo = document.getElementById('auto-ativo').checked;
+  const r = await fetch('/api/posts/config', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ativo })
+  });
+  const d = await r.json();
+  if (d.ok) { showToast(ativo ? '✅ Autopostagem ligada!' : '⏸ Autopostagem desligada'); autoStatus(); }
+  else { showToast('❌ ' + (d.erro || 'erro')); document.getElementById('auto-ativo').checked = !ativo; }
+}
+
+async function autoSalvar() {
+  const horarios = lerHorarios();
+  if (!horarios.length) return showToast('❌ Defina ao menos um horário');
+
+  const body = {
+    ativo:     document.getElementById('auto-ativo').checked,
+    horarios,
+    timezone:  document.getElementById('auto-tz').value,
+    max_chars: parseInt(document.getElementById('auto-maxchars').value, 10) || 275,
+    modelo:    document.getElementById('auto-modelo').value,
+    hashtags:  document.getElementById('auto-hashtags').checked,
+    temas:     document.getElementById('auto-temas').value
+                 .split('\n').map(t => t.trim()).filter(Boolean),
+  };
+  const mapa = {
+    anthropic_api_key:     'auto-anthropic',
+    x_api_key:             'auto-xkey',
+    x_api_secret:          'auto-xsecret',
+    x_access_token:        'auto-xtoken',
+    x_access_token_secret: 'auto-xtokensecret',
+    cron_token:            'auto-crontoken',
+  };
+  for (const [campo, id] of Object.entries(mapa)) {
+    const v = document.getElementById(id).value.trim();
+    if (v) body[campo] = v;
+  }
+
+  const r = await fetch('/api/posts/config', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  const d = await r.json();
+  if (!d.ok) return showToast('❌ ' + (d.erro || 'erro ao salvar'));
+  Object.values(mapa).forEach(id => { document.getElementById(id).value = ''; });
+  showToast('✅ Configuração salva!');
+  autoCarregar();
+}
+
+async function autoPreview() {
+  const btn = document.getElementById('btn-auto-preview');
+  btn.disabled = true; btn.textContent = '⏳ Gerando...';
+  try {
+    const r = await fetch('/api/posts/preview', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    });
+    const d = await r.json();
+    if (!d.ok) { showToast('❌ ' + d.erro); return; }
+    autoPreviewAtual = d;
+    document.getElementById('auto-preview-box').style.display = 'block';
+    document.getElementById('auto-preview-txt').textContent = d.texto;
+    document.getElementById('auto-preview-chars').textContent = d.chars + ' caracteres';
+    document.getElementById('auto-preview-tema').textContent = 'tema: ' + (d.tema || '—');
+  } catch (e) { showToast('❌ ' + e.message); }
+  finally { btn.disabled = false; btn.textContent = '✨ Gerar sem publicar'; }
+}
+
+async function autoPublicar(body, btn, labelOriginal) {
+  if (btn) { btn.disabled = true; btn.innerHTML = '<div class="btn-inner"><span>⏳</span><span>Publicando...</span></div>'; }
+  try {
+    const r = await fetch('/api/posts/publicar', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const d = await r.json();
+    if (d.ok) {
+      showToast('🚀 Publicado no X!');
+      document.getElementById('auto-preview-box').style.display = 'none';
+      autoPreviewAtual = null;
+      autoHistorico(); autoStatus();
+    } else {
+      showToast('❌ ' + (d.erro || d.motivo || 'não publicou'));
+    }
+  } catch (e) { showToast('❌ ' + e.message); }
+  finally { if (btn) { btn.disabled = false; btn.innerHTML = labelOriginal; } }
+}
+
+function autoPublicarAgora() {
+  if (!confirm('Gerar um post novo e publicar agora no X?')) return;
+  const btn = document.getElementById('btn-auto-pub');
+  autoPublicar({}, btn, '<div class="btn-inner"><span>🚀</span><span>Publicar agora</span></div>');
+}
+
+function autoPublicarPreview() {
+  if (!autoPreviewAtual) return;
+  if (!confirm('Publicar esse texto no X agora?')) return;
+  autoPublicar({ texto: autoPreviewAtual.texto, tema: autoPreviewAtual.tema }, null, null);
+}
+
+async function autoHistorico() {
+  let d;
+  try { d = await (await fetch('/api/posts/historico')).json(); } catch (e) { return; }
+  const box = document.getElementById('auto-historico');
+  if (!d.itens || !d.itens.length) {
+    box.innerHTML = '<div class="hint">Nenhum post ainda.</div>';
+    return;
+  }
+  box.innerHTML = d.itens.map(it => {
+    const erro = String(it.status || '').startsWith('erro');
+    const rotulo = { publicado: '✅ publicado', erro_geracao: '❌ erro ao gerar',
+                     erro_publicacao: '❌ erro ao publicar' }[it.status] || it.status;
+    const link = it.url ? `<a href="${it.url}" target="_blank" rel="noopener">ver no X ↗</a>` : '';
+    const corpo = erro
+      ? `<div class="post-item-txt" style="color:var(--red)">${(it.erro || '').replace(/</g, '&lt;')}</div>` +
+        (it.texto ? `<div class="post-item-tema">texto gerado: ${it.texto.replace(/</g, '&lt;')}</div>` : '')
+      : `<div class="post-item-txt">${(it.texto || '').replace(/</g, '&lt;')}</div>`;
+    return `<div class="post-item ${erro ? 'erro' : ''}">
+      <div class="post-item-top">
+        <span>${hhmmLocal(it.ts)} · ${rotulo} · ${it.origem || ''}</span>
+        <span>${link}</span>
+      </div>
+      ${corpo}
+      ${it.tema && !erro ? `<div class="post-item-tema">tema: ${it.tema.replace(/</g, '&lt;')}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+async function autoLimparHist() {
+  if (!confirm('Apagar o histórico de posts automáticos? O bot pode voltar a repetir temas.')) return;
+  await fetch('/api/posts/historico/limpar', { method: 'POST' });
+  showToast('🗑 Histórico limpo!');
+  autoHistorico(); autoStatus();
+}
+
 loadConfig();
 carregarDashboard();
 setInterval(atualizarHistorico, 10000);
